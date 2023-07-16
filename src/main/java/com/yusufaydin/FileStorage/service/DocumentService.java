@@ -30,4 +30,20 @@ public class DocumentService {
         document.setTags(documentDto.getTags());
         return documentRepository.save(document);
     }
+    public DocumentDto getDocumentByKey(String documentKey) throws Exception {
+        Document document = documentRepository.findByDocumentKey(documentKey);
+        if (document == null) {
+            throw new Exception("Document not found with key: " + documentKey);
+        }
+
+        DocumentDto documentDto = new DocumentDto();
+        documentDto.setFileName(document.getFileName());
+        documentDto.setMimeType(document.getMimeType());
+        documentDto.setFileContent(document.getFileContent());
+        documentDto.setReferenceSource(document.getReferenceSource());
+        documentDto.setReferenceKey(document.getReferenceKey());
+        documentDto.setDocumentType(document.getDocumentType());
+
+        return documentDto;
+    }
 }

@@ -1,6 +1,7 @@
 package com.yusufaydin.FileStorage.controller;
 
 import com.yusufaydin.FileStorage.dto.DocumentDto;
+import com.yusufaydin.FileStorage.dto.DocumentKeyDto;
 import com.yusufaydin.FileStorage.dto.ResponseDto;
 import com.yusufaydin.FileStorage.entity.Document;
 import com.yusufaydin.FileStorage.service.DocumentService;
@@ -57,5 +58,38 @@ public class DocumentController {
         }
     }
 
+    @PostMapping("/getDocument")
+    public ResponseEntity<ResponseDto<DocumentDto>> getDocument(@RequestBody DocumentKeyDto documentKeyDto) {
+        try {
+            DocumentDto document = documentService.getDocumentByKey(documentKeyDto.getDocumentKey());
 
+            if (document != null) {
+                DocumentDto documentDto = new DocumentDto();
+                documentDto.setFileName(document.getFileName());
+                documentDto.setMimeType(document.getMimeType());
+                documentDto.setFileContent(document.getFileContent());
+                documentDto.setReferenceSource(document.getReferenceSource());
+                documentDto.setReferenceKey(document.getReferenceKey());
+                documentDto.setDocumentType(document.getDocumentType());
+
+                ResponseDto<DocumentDto> response = new ResponseDto<>();
+                response.setSuccess(true);
+                response.setErrorCode(0);
+                response.setErrorList(Collections.emptyList());
+                response.setContent(documentDto);
+
+                return ResponseEntity.ok(response);
+            } else {
+                throw new Exception("Document not found.");
+            }
+        } catch (Exception e) {
+            ResponseDto<DocumentDto> response = new ResponseDto<>();
+            response.setSuccess(false);
+            response.setErrorCode(1);
+            response.setErrorList(Arrays.asList(e.getMessage()));
+            response.setContent(null);
+
+            return ResponseEntity.ok(response);
+        }
+    }
 }
