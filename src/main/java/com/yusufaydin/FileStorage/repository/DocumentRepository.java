@@ -1,6 +1,7 @@
 package com.yusufaydin.FileStorage.repository;
 
 
+import com.yusufaydin.FileStorage.dto.DocumentDto;
 import com.yusufaydin.FileStorage.entity.Document;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

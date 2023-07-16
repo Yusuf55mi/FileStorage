@@ -10,9 +10,6 @@ public class ReferenceDto {
     private String referenceSource;
     private String referenceKey;
 
-    public ReferenceDto() {
-    }
-
     public ReferenceDto(String referenceSource, String referenceKey) {
         this.referenceSource = referenceSource;
         this.referenceKey = referenceKey;

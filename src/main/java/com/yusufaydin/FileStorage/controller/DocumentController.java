@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -55,24 +54,16 @@ public class DocumentController {
     }
 
     @PostMapping("/getDocument")
-    public ResponseEntity<ResponseDto<DocumentDto>> getDocument(@RequestBody String documentKey) {
+    public ResponseEntity<ResponseDto<DocumentDto>> getDocument(@RequestBody DocumentDto documentKey) {
         try {
             DocumentDto document = documentService.getDocumentByKey(documentKey);
 
             if (document != null) {
-                DocumentDto documentDto = new DocumentDto();
-                documentDto.setFileName(document.getFileName());
-                documentDto.setMimeType(document.getMimeType());
-                documentDto.setFileContent(document.getFileContent());
-                documentDto.setReferenceSource(document.getReferenceSource());
-                documentDto.setReferenceKey(document.getReferenceKey());
-                documentDto.setDocumentType(document.getDocumentType());
-
                 ResponseDto<DocumentDto> response = new ResponseDto<>();
                 response.setSuccess(true);
                 response.setErrorCode(0);
                 response.setErrorList(Collections.emptyList());
-                response.setContent(documentDto);
+                response.setContent(document);
 
                 return ResponseEntity.ok(response);
             } else {
@@ -92,24 +83,12 @@ public class DocumentController {
     public ResponseEntity<ResponseDto<List<DocumentDto>>> getDocumentsByReference(@RequestBody ReferenceDto referenceDto) {
         try {
         List<DocumentDto> documents = documentService.getDocumentsByReference(referenceDto.getReferenceSource(), referenceDto.getReferenceKey());
-            if (documents != null) {
-        List<DocumentDto> documentDtos = new ArrayList<>();
-        for (DocumentDto document : documents) {
-            DocumentDto documentDto = new DocumentDto();
-            documentDto.setFileName(document.getFileName());
-            documentDto.setMimeType(document.getMimeType());
-            documentDto.setReferenceSource(document.getReferenceSource());
-            documentDto.setReferenceKey(document.getReferenceKey());
-            documentDto.setDocumentKey(document.getDocumentKey());
-            documentDto.setDocumentType(document.getDocumentType());
-            documentDtos.add(documentDto);
-        }
-
+        if (documents != null) {
         ResponseDto<List<DocumentDto>> response = new ResponseDto<>();
         response.setSuccess(true);
         response.setErrorCode(0);
         response.setErrorList(Collections.emptyList());
-        response.setContent(documentDtos);
+        response.setContent(documents);
 
         return ResponseEntity.ok(response);
             } else {

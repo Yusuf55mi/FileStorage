@@ -32,10 +32,10 @@ public class DocumentService {
         document.setTags(documentDto.getTags());
         return documentRepository.save(document);
     }
-    public DocumentDto getDocumentByKey(String documentKey) throws Exception {
-        Document document = documentRepository.findByDocumentKey(documentKey);
+    public DocumentDto getDocumentByKey(DocumentDto key) throws Exception {
+        Document document = documentRepository.findByDocumentKey(key.getDocumentKey());
         if (document == null) {
-            throw new Exception("Document not found with key: " + documentKey);
+            throw new Exception("Document not found with key: " + key.getDocumentKey());
         }
 
         DocumentDto documentDto = new DocumentDto();
