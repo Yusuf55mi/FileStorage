@@ -6,6 +6,8 @@ import com.yusufaydin.FileStorage.repository.DocumentRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -45,5 +47,22 @@ public class DocumentService {
         documentDto.setDocumentType(document.getDocumentType());
 
         return documentDto;
+    }
+    public List<DocumentDto> getDocumentsByReference(String referenceSource, String referenceKey) {
+        List<Document> documents = documentRepository.findByReferenceSourceAndReferenceKey(referenceSource, referenceKey);
+        List<DocumentDto> documentDtos = new ArrayList<>();
+
+        for (Document document : documents) {
+            DocumentDto documentDto = new DocumentDto();
+            documentDto.setFileName(document.getFileName());
+            documentDto.setMimeType(document.getMimeType());
+            documentDto.setReferenceSource(document.getReferenceSource());
+            documentDto.setReferenceKey(document.getReferenceKey());
+            documentDto.setDocumentKey(document.getDocumentKey());
+            documentDto.setDocumentType(document.getDocumentType());
+            documentDtos.add(documentDto);
+        }
+
+        return documentDtos;
     }
 }

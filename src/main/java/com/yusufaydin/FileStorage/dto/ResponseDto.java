@@ -7,10 +7,10 @@ import java.util.List;
 
 @Getter
 @Setter
-public class ResponseDto<DocumentDto> {
+public class ResponseDto<T> {
     private boolean success;
     private int errorCode;
     private List<String> errorList;
-    private DocumentDto content;
+    private T content;
 
 }
