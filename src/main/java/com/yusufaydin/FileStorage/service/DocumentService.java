@@ -5,15 +5,14 @@ import com.yusufaydin.FileStorage.entity.Document;
 import com.yusufaydin.FileStorage.repository.DocumentRepository;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class DocumentService {
@@ -39,12 +38,8 @@ public class DocumentService {
 
         String fileExtension = getFileExtension(document.getMimeType());
         String filePath = "src/main/java/com/yusufaydin/FileStorage/fileContent/" + document.getDocumentKey() + fileExtension;
-        try {
-            Files.write(Path.of(filePath), fileContent);
-            document.setFileContent(filePath);
-        } catch (Exception e) {
-            throw new Exception("Failed to save file: " + e.getMessage());
-        }
+        Files.write(Path.of(filePath), fileContent);
+        document.setFileContent(filePath);
 
         return documentRepository.save(document);
     }
@@ -55,6 +50,21 @@ public class DocumentService {
             throw new Exception("Document not found with key: " + documentKey);
         }
 
+        return mapDocumentToDto(document);
+    }
+
+    public List<DocumentDto> getDocumentsByReference(String referenceSource, String referenceKey) throws Exception {
+        List<Document> documents = documentRepository.findByReferenceSourceAndReferenceKey(referenceSource, referenceKey);
+        if (documents.isEmpty()) {
+            throw new Exception("Documents not found with references: " + referenceSource + "," + referenceKey);
+        }
+
+        return documents.stream()
+                .map(this::mapDocumentToDto)
+                .collect(Collectors.toList());
+    }
+
+    private DocumentDto mapDocumentToDto(Document document) {
         DocumentDto documentDto = new DocumentDto();
         documentDto.setFileName(document.getFileName());
         documentDto.setMimeType(document.getMimeType());
@@ -63,56 +73,24 @@ public class DocumentService {
         documentDto.setDocumentKey(document.getDocumentKey());
         documentDto.setDocumentType(document.getDocumentType());
         documentDto.setFileContent(document.getFileContent());
-
         return documentDto;
-    }
-
-    public List<DocumentDto> getDocumentsByReference(String referenceSource, String referenceKey) throws IOException {
-        List<Document> documents = documentRepository.findByReferenceSourceAndReferenceKey(referenceSource, referenceKey);
-        List<DocumentDto> documentDtos = new ArrayList<>();
-
-        for (Document document : documents) {
-            DocumentDto documentDto = new DocumentDto();
-            documentDto.setFileName(document.getFileName());
-            documentDto.setMimeType(document.getMimeType());
-            documentDto.setReferenceSource(document.getReferenceSource());
-            documentDto.setReferenceKey(document.getReferenceKey());
-            documentDto.setDocumentKey(document.getDocumentKey());
-            documentDto.setDocumentType(document.getDocumentType());
-            documentDto.setFileContent(document.getFileContent());
-            documentDtos.add(documentDto);
-        }
-
-        return documentDtos;
     }
 
     private byte[] decodeBase64(String base64String) {
         return Base64.getDecoder().decode(base64String.getBytes(StandardCharsets.UTF_8));
     }
 
-    private String encodeBase64(byte[] data) {
-        return Base64.getEncoder().encodeToString(data);
-    }
-
     private String getFileExtension(String mimeType) throws Exception {
-        if (mimeType.equals("application/pdf")) {
-            return ".pdf";
-        } else if (mimeType.equals("text/plain")) {
-            return ".txt";
-        } else if (mimeType.equals("text/html")) {
-            return ".html";
-        } else if (mimeType.equals("application/xml")) {
-            return ".xml";
-        } else if (mimeType.equals("application/zip")) {
-            return ".zip";
-        } else if (mimeType.equals("application/msword")) {
-            return ".doc";
-        } else if (mimeType.equals("image/png")) {
-            return ".png";
-        } else if (mimeType.equals("application/vnd.ms-excel")) {
-            return ".xml";
-        } else {
-            throw new Exception("Invalid file format.");
-        }
+        return switch (mimeType) {
+            case "application/pdf" -> ".pdf";
+            case "text/plain" -> ".txt";
+            case "text/html" -> ".html";
+            case "application/xml" -> ".xml";
+            case "application/zip" -> ".zip";
+            case "application/msword" -> ".doc";
+            case "image/png" -> ".png";
+            case "application/vnd.ms-excel" -> ".xslx";
+            default -> throw new Exception("Invalid file format.");
+        };
     }
 }

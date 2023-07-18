@@ -5,13 +5,12 @@ import com.yusufaydin.FileStorage.dto.ReferenceDto;
 import com.yusufaydin.FileStorage.dto.ResponseDto;
 import com.yusufaydin.FileStorage.entity.Document;
 import com.yusufaydin.FileStorage.service.DocumentService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -29,28 +28,14 @@ public class DocumentController {
         try {
             Document document = documentService.createDocument(documentDto);
 
-            if (document != null) {
-                DocumentDto createdDocumentDto = new DocumentDto();
-                createdDocumentDto.setDocumentKey(document.getDocumentKey());
+            DocumentDto createdDocumentDto = new DocumentDto();
+            createdDocumentDto.setDocumentKey(document.getDocumentKey());
 
-                ResponseDto<DocumentDto> response = new ResponseDto<>();
-                response.setSuccess(true);
-                response.setErrorCode(0);
-                response.setErrorList(Collections.emptyList());
-                response.setContent(createdDocumentDto);
-
-                return ResponseEntity.ok(response);
-            } else {
-                throw new Exception("Document creation failed.");
-            }
-        } catch (Exception e) {
-            ResponseDto<DocumentDto> response = new ResponseDto<>();
-            response.setSuccess(false);
-            response.setErrorCode(e.hashCode());
-            response.setErrorList(Arrays.asList(e.getMessage()));
-            response.setContent(null);
-
+            ResponseDto<DocumentDto> response = createSuccessResponse(createdDocumentDto);
             return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ResponseDto<DocumentDto> response = createErrorResponse(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
@@ -59,51 +44,42 @@ public class DocumentController {
         try {
             DocumentDto document = documentService.getDocumentByKey(documentKey.getDocumentKey());
 
-            if (document != null) {
-                ResponseDto<DocumentDto> response = new ResponseDto<>();
-                response.setSuccess(true);
-                response.setErrorCode(0);
-                response.setErrorList(Collections.emptyList());
-                response.setContent(document);
-
-                return ResponseEntity.ok(response);
-            } else {
-                throw new Exception("Document not found.");
-            }
-        } catch (Exception e) {
-            ResponseDto<DocumentDto> response = new ResponseDto<>();
-            response.setSuccess(false);
-            response.setErrorCode(e.hashCode());
-            response.setErrorList(Arrays.asList(e.getMessage()));
-            response.setContent(null);
-
+            ResponseDto<DocumentDto> response = createSuccessResponse(document);
             return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ResponseDto<DocumentDto> response = createErrorResponse(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
     @PostMapping("/getDocument/byReference")
     public ResponseEntity<ResponseDto<List<DocumentDto>>> getDocumentsByReference(@RequestBody ReferenceDto referenceDto) {
         try {
-        List<DocumentDto> documents = documentService.getDocumentsByReference(referenceDto.getReferenceSource(), referenceDto.getReferenceKey());
-        if (documents != null) {
-        ResponseDto<List<DocumentDto>> response = new ResponseDto<>();
-        response.setSuccess(true);
-        response.setErrorCode(0);
-        response.setErrorList(Collections.emptyList());
-        response.setContent(documents);
+            List<DocumentDto> documents = documentService.getDocumentsByReference(referenceDto.getReferenceSource(), referenceDto.getReferenceKey());
 
-        return ResponseEntity.ok(response);
-            } else {
-                throw new Exception("Document not found.");
-            }
-        } catch (Exception e) {
-            ResponseDto<List<DocumentDto>> response = new ResponseDto<>();
-            response.setSuccess(false);
-            response.setErrorCode(e.hashCode());
-            response.setErrorList(Arrays.asList(e.getMessage()));
-            response.setContent(null);
-
+            ResponseDto<List<DocumentDto>> response = createSuccessResponse(documents);
             return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ResponseDto<List<DocumentDto>> response = createErrorResponse(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
+    private <T> ResponseDto<T> createSuccessResponse(T content) {
+        ResponseDto<T> response = new ResponseDto<>();
+        response.setSuccess(true);
+        response.setErrorCode(0);
+        response.setErrorList(Collections.emptyList());
+        response.setContent(content);
+        return response;
+    }
+
+    private <T> ResponseDto<T> createErrorResponse(Exception e) {
+        ResponseDto<T> response = new ResponseDto<>();
+        response.setSuccess(false);
+        response.setErrorCode(e.hashCode());
+        response.setErrorList(Collections.singletonList(e.getMessage()));
+        response.setContent(null);
+        return response;
+    }
 }
