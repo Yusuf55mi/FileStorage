@@ -5,6 +5,7 @@ import com.yusufaydin.FileStorage.dto.ReferenceDto;
 import com.yusufaydin.FileStorage.dto.ResponseDto;
 import com.yusufaydin.FileStorage.entity.Document;
 import com.yusufaydin.FileStorage.service.DocumentService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,7 +57,7 @@ public class DocumentController {
     @PostMapping("/getDocument")
     public ResponseEntity<ResponseDto<DocumentDto>> getDocument(@RequestBody DocumentDto documentKey) {
         try {
-            DocumentDto document = documentService.getDocumentByKey(documentKey);
+            DocumentDto document = documentService.getDocumentByKey(documentKey.getDocumentKey());
 
             if (document != null) {
                 ResponseDto<DocumentDto> response = new ResponseDto<>();
