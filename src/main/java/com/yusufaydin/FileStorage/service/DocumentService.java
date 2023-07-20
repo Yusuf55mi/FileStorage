@@ -9,7 +9,6 @@ import com.yusufaydin.FileStorage.mapper.DocumentMapper;
 import com.yusufaydin.FileStorage.repository.DocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,8 +22,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.apache.tomcat.util.codec.binary.Base64.encodeBase64;
-
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -37,11 +34,7 @@ public class DocumentService {
     public DocumentDto createDocument(DocumentDto documentDto) throws Exception {
         Document document = documentMapper.toDocument(documentDto);
 
-        if (document.getFileName() == null) {
-            throw new DocumentNotCreatedException("fileName boş bırakılamaz");
-        } else if (document.getDocumentType() == null) {
-            throw new DocumentNotCreatedException("documentType boş bırakılamaz");
-        }
+        validateDocument(document);
 
         document.setDocumentKey(UUID.randomUUID().toString());
         document.setCreatedAt(LocalDateTime.now());
@@ -67,10 +60,11 @@ public class DocumentService {
         if (document == null) {
             throw new DocumentNotFoundException("Document not found with key: " + documentKey);
         }
+
         DocumentDto dto = documentMapper.toDocumentDto(document);
         String fileContent;
         try {
-            fileContent = Base64.getEncoder().encodeToString(Files.readAllBytes(Path.of(document.getFileContent())));
+            fileContent = encodeBase64(Files.readAllBytes(Path.of(document.getFileContent())));
         } catch (IOException e) {
             throw new DocumentNotDecodedException("Döküman Base64 formatına çevrilemedi");
         }
@@ -90,7 +84,19 @@ public class DocumentService {
                 .collect(Collectors.toList());
     }
 
+    private void validateDocument(Document document) {
+        if (document.getFileName() == null) {
+            throw new DocumentNotCreatedException("fileName boş bırakılamaz");
+        } else if (document.getDocumentType() == null) {
+            throw new DocumentNotCreatedException("documentType boş bırakılamaz");
+        }
+    }
+
     private byte[] decodeBase64(String base64String) {
         return Base64.getDecoder().decode(base64String.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String encodeBase64(byte[] fileContent) {
+        return Base64.getEncoder().encodeToString(fileContent);
     }
 }

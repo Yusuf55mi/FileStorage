@@ -21,12 +21,12 @@ public class DocumentController {
     public ResponseEntity<ResponseDto<String>> createDocument(@RequestBody DocumentDto documentDto) throws Exception {
         DocumentDto createdDocument = documentService.createDocument(documentDto);
         String documentKey = createdDocument.getDocumentKey();
-        ResponseDto<String> response = createSuccessResponse(documentKey);
+        ResponseDto<String> response = createSuccessResponse("Document Key: " + documentKey);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/getDocument")
-    public ResponseEntity<ResponseDto<DocumentDto>> getDocument(@RequestBody DocumentDto documentKey) throws Exception {
+    public ResponseEntity<ResponseDto<DocumentDto>> getDocument(@RequestBody DocumentDto documentKey) {
         DocumentDto document = documentService.getDocumentByKey(documentKey.getDocumentKey());
         ResponseDto<DocumentDto> response = createSuccessResponse(document);
         return ResponseEntity.ok(response);
