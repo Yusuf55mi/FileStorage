@@ -2,9 +2,18 @@ package com.yusufaydin.FileStorage.service;
 
 import com.yusufaydin.FileStorage.dto.DocumentDto;
 import com.yusufaydin.FileStorage.entity.Document;
+import com.yusufaydin.FileStorage.exception.DocumentNotCreatedException;
+import com.yusufaydin.FileStorage.exception.DocumentNotDecodedException;
+import com.yusufaydin.FileStorage.exception.DocumentNotFoundException;
+import com.yusufaydin.FileStorage.mapper.DocumentMapper;
 import com.yusufaydin.FileStorage.repository.DocumentRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,83 +23,74 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.apache.tomcat.util.codec.binary.Base64.encodeBase64;
+
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class DocumentService {
     private final DocumentRepository documentRepository;
+    private final DocumentMapper documentMapper;
+    @Value("${file.upload.path}")
+    private String path;
 
-    public DocumentService(DocumentRepository documentRepository) {
-        this.documentRepository = documentRepository;
-    }
+    public DocumentDto createDocument(DocumentDto documentDto) throws Exception {
+        Document document = documentMapper.toDocument(documentDto);
 
-    public Document createDocument(DocumentDto documentDto) throws Exception {
-        Document document = new Document();
-        document.setFileName(documentDto.getFileName());
-        document.setMimeType(documentDto.getMimeType());
-        document.setReferenceSource(documentDto.getReferenceSource());
-        document.setReferenceKey(documentDto.getReferenceKey());
-        document.setDocumentType(documentDto.getDocumentType());
+        if (document.getFileName() == null) {
+            throw new DocumentNotCreatedException("fileName boş bırakılamaz");
+        } else if (document.getDocumentType() == null) {
+            throw new DocumentNotCreatedException("documentType boş bırakılamaz");
+        }
+
         document.setDocumentKey(UUID.randomUUID().toString());
         document.setCreatedAt(LocalDateTime.now());
-        document.setUpdatedAt(LocalDateTime.now());
-        document.setTags(documentDto.getTags());
 
         byte[] fileContent = decodeBase64(documentDto.getFileContent());
 
-        String fileExtension = getFileExtension(document.getMimeType());
-        String filePath = "src/main/java/com/yusufaydin/FileStorage/fileContent/" + document.getDocumentKey() + fileExtension;
+        if (fileContent == null) {
+            throw new DocumentNotDecodedException("fileContent alanının base64 formatında olduğundan emin olunuz");
+        }
+
+        String filePath = path + document.getFileName();
         Files.write(Path.of(filePath), fileContent);
         document.setFileContent(filePath);
 
-        return documentRepository.save(document);
+        document = documentRepository.save(document);
+
+        return documentMapper.toDocumentDto(document);
     }
 
-    public DocumentDto getDocumentByKey(String documentKey) throws Exception {
+    public DocumentDto getDocumentByKey(String documentKey) {
         Document document = documentRepository.findByDocumentKey(documentKey);
-        if (document == null) {
-            throw new Exception("Document not found with key: " + documentKey);
-        }
 
-        return mapDocumentToDto(document);
+        if (document == null) {
+            throw new DocumentNotFoundException("Document not found with key: " + documentKey);
+        }
+        DocumentDto dto = documentMapper.toDocumentDto(document);
+        String fileContent;
+        try {
+            fileContent = Base64.getEncoder().encodeToString(Files.readAllBytes(Path.of(document.getFileContent())));
+        } catch (IOException e) {
+            throw new DocumentNotDecodedException("Döküman Base64 formatına çevrilemedi");
+        }
+        dto.setFileContent(fileContent);
+        return dto;
     }
 
-    public List<DocumentDto> getDocumentsByReference(String referenceSource, String referenceKey) throws Exception {
+    public List<DocumentDto> getDocumentsByReference(String referenceSource, String referenceKey) {
         List<Document> documents = documentRepository.findByReferenceSourceAndReferenceKey(referenceSource, referenceKey);
+
         if (documents.isEmpty()) {
-            throw new Exception("Documents not found with references: " + referenceSource + "," + referenceKey);
+            throw new DocumentNotFoundException("Documents not found with references: " + referenceSource + "," + referenceKey);
         }
 
         return documents.stream()
-                .map(this::mapDocumentToDto)
+                .map(documentMapper::toDocumentDto)
                 .collect(Collectors.toList());
-    }
-
-    private DocumentDto mapDocumentToDto(Document document) {
-        DocumentDto documentDto = new DocumentDto();
-        documentDto.setFileName(document.getFileName());
-        documentDto.setMimeType(document.getMimeType());
-        documentDto.setReferenceSource(document.getReferenceSource());
-        documentDto.setReferenceKey(document.getReferenceKey());
-        documentDto.setDocumentKey(document.getDocumentKey());
-        documentDto.setDocumentType(document.getDocumentType());
-        documentDto.setFileContent(document.getFileContent());
-        return documentDto;
     }
 
     private byte[] decodeBase64(String base64String) {
         return Base64.getDecoder().decode(base64String.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private String getFileExtension(String mimeType) throws Exception {
-        return switch (mimeType) {
-            case "application/pdf" -> ".pdf";
-            case "text/plain" -> ".txt";
-            case "text/html" -> ".html";
-            case "application/xml" -> ".xml";
-            case "application/zip" -> ".zip";
-            case "application/msword" -> ".doc";
-            case "image/png" -> ".png";
-            case "application/vnd.ms-excel" -> ".xslx";
-            default -> throw new Exception("Invalid file format.");
-        };
     }
 }
