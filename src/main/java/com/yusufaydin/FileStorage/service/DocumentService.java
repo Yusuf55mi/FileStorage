@@ -2,17 +2,18 @@ package com.yusufaydin.FileStorage.service;
 
 import com.yusufaydin.FileStorage.dto.DocumentDto;
 import com.yusufaydin.FileStorage.entity.Document;
-import com.yusufaydin.FileStorage.exception.DocumentNotCreatedException;
-import com.yusufaydin.FileStorage.exception.DocumentNotDecodedException;
-import com.yusufaydin.FileStorage.exception.DocumentNotFoundException;
+import com.yusufaydin.FileStorage.entity.DocumentType;
+import com.yusufaydin.FileStorage.exception.*;
 import com.yusufaydin.FileStorage.mapper.DocumentMapper;
 import com.yusufaydin.FileStorage.repository.DocumentRepository;
+import com.yusufaydin.FileStorage.repository.DocumentTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,18 +29,21 @@ import java.util.stream.Collectors;
 public class DocumentService {
     private final DocumentRepository documentRepository;
     private final DocumentMapper documentMapper;
+    private final DocumentTypeRepository documentTypeRepository;
     @Value("${file.upload.path}")
     private String path;
 
     public DocumentDto createDocument(DocumentDto documentDto) throws Exception {
         Document document = documentMapper.toDocument(documentDto);
 
-        validateDocument(document);
-
         document.setDocumentKey(UUID.randomUUID().toString());
         document.setCreatedAt(LocalDateTime.now());
 
+        validateDocument(document);
+        validateDocumentType(documentDto);
+
         byte[] fileContent = decodeBase64(documentDto.getFileContent());
+
 
         if (fileContent == null) {
             throw new DocumentNotDecodedException("fileContent alanının base64 formatında olduğundan emin olunuz");
@@ -85,10 +89,40 @@ public class DocumentService {
     }
 
     private void validateDocument(Document document) {
-        if (document.getFileName() == null) {
-            throw new DocumentNotCreatedException("fileName boş bırakılamaz");
-        } else if (document.getDocumentType() == null) {
-            throw new DocumentNotCreatedException("documentType boş bırakılamaz");
+        Class<Document> documentClass = Document.class;
+        Field[] fields = documentClass.getDeclaredFields();
+
+        for (Field field : fields) {
+            try {
+                field.setAccessible(true);
+                Object value = field.get(document);
+
+                if (value == null) {
+                    throw new DocumentNotCreatedException(field.getName() + " boş bırakılamaz");
+                } else if (value instanceof String && ((String) value).isEmpty()) {
+                    throw new DocumentNotCreatedException(field.getName() + " boş bırakılamaz");
+                }
+            } catch (IllegalAccessException e) {
+                throw new DocumentNotCreatedException("Döküman doğrulanırken bir hata meydana geldi");
+            }
+        }
+    }
+
+    private void validateDocumentType(DocumentDto documentDto) {
+        DocumentType documentType = documentTypeRepository.findDocumentTypeByNameContains(documentDto.getDocumentType());
+        if (!documentType.getAllowedMimeTypes().contains(documentDto.getMimeType())) {
+            throw new DocumentMimeTypeNotAllowedException(documentDto.getDocumentType() + " tipi dökümanlar " + documentType.getAllowedMimeTypes() + " şeklinde kayıt edilebilir.");
+        }
+        byte[] file = decodeBase64(documentDto.getFileContent());
+        long fileSizeInBytes = file.length;
+        double fileSizeInMegabytes = (double) fileSizeInBytes / (1024 * 1024);
+        if (fileSizeInMegabytes > documentType.getMaxFileSize()) {
+            throw new DocumentSizeNotAllowedException(documentDto.getDocumentType() + " tipi dökümanlar en fazla " + documentType.getMaxFileSize() + "MB boyutunda olabilir.");
+        }
+        List<DocumentDto> documents = getDocumentsByReference(documentDto.getReferenceSource(), documentDto.getReferenceKey());
+        int documentCount = documents.size();
+        if (documentCount > documentType.getMaxFileCount()) {
+            throw new DocumentCountNotAllowedException(documentType.getName() + " tipi dökümanlardan en fazla " + documentType.getMaxFileCount() + " adet bulunabilir.");
         }
     }
 

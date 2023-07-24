@@ -5,6 +5,7 @@ import com.yusufaydin.FileStorage.dto.ReferenceDto;
 import com.yusufaydin.FileStorage.dto.ResponseDto;
 import com.yusufaydin.FileStorage.service.DocumentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class DocumentController {
         DocumentDto createdDocument = documentService.createDocument(documentDto);
         String documentKey = createdDocument.getDocumentKey();
         ResponseDto<String> response = createSuccessResponse("Document Key: " + documentKey);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/getDocument")

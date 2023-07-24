@@ -1,21 +1,14 @@
 package com.yusufaydin.FileStorage.entity;
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
+import lombok.Data;
+
 import java.util.List;
 
-@Getter
-@Setter
+@Data
 @Entity
 @Table(name = "document")
-public class Document {
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id")
-    private Long id;
-
+public class Document extends BaseEntity {
     @Column(name = "file_name")
     private String fileName;
 
@@ -36,12 +29,6 @@ public class Document {
 
     @Column(name = "document_key")
     private String documentKey;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "document_tags", joinColumns = @JoinColumn(name = "document_id"))
