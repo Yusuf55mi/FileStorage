@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -80,7 +81,7 @@ public class DocumentService {
         List<Document> documents = documentRepository.findByReferenceSourceAndReferenceKey(referenceSource, referenceKey);
 
         if (documents.isEmpty()) {
-            throw new DocumentNotFoundException("Documents not found with references: " + referenceSource + "," + referenceKey);
+            throw new DocumentNotFoundException("Bu referanslara ait dosya bulunamadı: " + referenceSource + "," + referenceKey);
         }
 
         return documents.stream()
@@ -89,6 +90,14 @@ public class DocumentService {
     }
 
     private void validateDocument(Document document) {
+
+        List<Document> documents = documentRepository.findByReferenceSourceAndReferenceKey(document.getReferenceSource(), document.getReferenceKey());
+        for (Document document1 : documents) {
+            if (Objects.equals(document1.getFileName(), document.getFileName())) {
+                throw new DocumentNotCreatedException(document.getFileName() + " zaten var.");
+            }
+        }
+
         Class<Document> documentClass = Document.class;
         Field[] fields = documentClass.getDeclaredFields();
 
@@ -119,11 +128,12 @@ public class DocumentService {
         if (fileSizeInMegabytes > documentType.getMaxFileSize()) {
             throw new DocumentSizeNotAllowedException(documentDto.getDocumentType() + " tipi dökümanlar en fazla " + documentType.getMaxFileSize() + "MB boyutunda olabilir.");
         }
-        List<DocumentDto> documents = getDocumentsByReference(documentDto.getReferenceSource(), documentDto.getReferenceKey());
+        List<Document> documents = documentRepository.findByReferenceSourceAndReferenceKey(documentDto.getReferenceSource(), documentDto.getReferenceKey());
         int documentCount = documents.size();
-        if (documentCount > documentType.getMaxFileCount()) {
+        if (documentCount >= documentType.getMaxFileCount()) {
             throw new DocumentCountNotAllowedException(documentType.getName() + " tipi dökümanlardan en fazla " + documentType.getMaxFileCount() + " adet bulunabilir.");
         }
+
     }
 
     private byte[] decodeBase64(String base64String) {
